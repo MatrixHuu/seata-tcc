@@ -1,6 +1,9 @@
 package org.javaboy.account.service;
 
+import io.seata.rm.tcc.api.BusinessActionContext;
 import org.javaboy.account.mapper.AccountMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,15 +14,21 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class AccountService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AccountService.class);
+
     @Autowired
     AccountMapper accountMapper;
 
-    public boolean deductAccount(String account, Double money) {
-        accountMapper.updateAccount(account, money);
-        Double m = accountMapper.getMoneyByAccount(account);
-        if (m >= 0) {
-            return true;
-        }
-        throw new RuntimeException("账户余额不足");
+    public boolean prepare(String userId, Double money) {
+        return false;
+    }
+
+    public boolean commit(BusinessActionContext actionContext) {
+        return false;
+    }
+
+    public boolean rollback(BusinessActionContext actionContext) {
+        return false;
     }
 }
