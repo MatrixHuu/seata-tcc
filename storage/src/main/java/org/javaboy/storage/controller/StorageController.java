@@ -1,6 +1,8 @@
 package org.javaboy.storage.controller;
 
+import io.seata.rm.tcc.api.BusinessActionContext;
 import org.javaboy.common.RespBean;
+import org.javaboy.common.feign.StorageServiceApi;
 import org.javaboy.storage.service.StorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,17 +14,23 @@ import org.springframework.web.bind.annotation.RestController;
  * @data 2023/6/20 14:26
  */
 @RestController
-public class StorageController {
+public class StorageController implements StorageServiceApi {
 
     @Autowired
     StorageService storageService;
 
-    @PostMapping("/deduct")
-    public RespBean deduct(String productId, Integer count) {
-        if (storageService.deduct(productId, count)) {
-            return RespBean.ok("扣库存成功");
-        }
-        return RespBean.error("扣库存失败");
+    @Override
+    public boolean prepare(BusinessActionContext actionContext, String productId, Integer count) {
+        return storageService.prepare(productId, count);
     }
 
+    @Override
+    public boolean commit(BusinessActionContext actionContext) {
+        return storageService.commit(actionContext);
+    }
+
+    @Override
+    public boolean rollback(BusinessActionContext actionContext) {
+        return storageService.rollback(actionContext);
+    }
 }

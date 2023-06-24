@@ -1,6 +1,8 @@
 package org.javaboy.order.controller;
 
+import io.seata.rm.tcc.api.BusinessActionContext;
 import org.javaboy.common.RespBean;
+import org.javaboy.common.feign.OrderServiceApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,15 +14,22 @@ import org.javaboy.order.service.OrderService;
  * @data 2023/6/20 12:06
  */
 @RestController
-public class OrderController {
+public class OrderController implements OrderServiceApi {
     @Autowired
     OrderService orderService;
 
-    @PostMapping("/createOrder")
-    public RespBean createOrder(String account, String productId, Integer count) {
-        if (orderService.createOrder(account, productId, count)) {
-            return RespBean.ok("下单成功");
-        }
-        return RespBean.error("下单失败");
+    @Override
+    public boolean prepare(BusinessActionContext actionContext, String userId, String productId, Integer count) {
+        return orderService.prepare(actionContext, userId, count, productId);
+    }
+
+    @Override
+    public boolean commit(BusinessActionContext actionContext) {
+        return orderService.commit(actionContext);
+    }
+
+    @Override
+    public boolean rollback(BusinessActionContext actionContext) {
+        return orderService.rollback(actionContext);
     }
 }

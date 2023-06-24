@@ -1,10 +1,13 @@
 package org.javaboy.order.service;
 
-import org.javaboy.common.RespBean;
-import org.javaboy.order.feign.AccountFeign;
+import io.seata.rm.tcc.api.BusinessActionContext;
+import org.javaboy.common.feign.AccountServiceApi;
 import org.javaboy.order.mapper.OrderMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author xyma
@@ -14,14 +17,36 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class OrderService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     @Autowired
-    AccountFeign accountFeign;
+    AccountServiceApi accountServiceApi;
     @Autowired
     OrderMapper orderMapper;
 
-    public boolean createOrder(String account, String productId, Integer count) {
-        RespBean respBean = accountFeign.deduct(account, count * 100.0);
-        int i = orderMapper.addOrder(account, productId, count, count * 100.0);
-        return i == 1 && respBean.getStatus() == 200;
+    @Transactional(rollbackFor = Exception.class)
+    public boolean prepare(BusinessActionContext actionContext, String userId, Integer count, String productId) {
+        boolean prepare = accountServiceApi.prepare(actionContext, userId, count * 100.0);
+        logger.info("{} 用户购买了 {} 商品，共计 {} 件， 预下单成功", userId, productId, count);
+        return prepare;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean commit(BusinessActionContext actionContext) {
+        String userId = (String) actionContext.getActionContext("userId");
+        String productId = (String) actionContext.getActionContext("productId");
+        Integer count = (Integer) actionContext.getActionContext("count");
+        Integer i = orderMapper.addOrder(userId, productId, count, count * 100.0);
+        logger.info("{} 用户购买了 {} 商品，共计 {} 件，下单成功", userId, productId, count);
+        return i == 1;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean rollback(BusinessActionContext actionContext) {
+        String userId = (String) actionContext.getActionContext("userId");
+        String productId = (String) actionContext.getActionContext("productId");
+        Integer count = (Integer) actionContext.getActionContext("count");
+        logger.info("{} 用户购买了 {} 商品，共计 {} 件，订单回滚成功", userId, productId, count);
+        return true;
     }
 }
